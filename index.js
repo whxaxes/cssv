@@ -27,8 +27,6 @@ module.exports = (function () {
     var cssv = function () {};
     var cssvp = cssv.prototype;
 
-    cssvp.logs = {};
-
     cssvp.run = function () {
         for (var i = 0; i < folders.length; i++) {
             var folder = folders[i];

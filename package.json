@@ -1,6 +1,6 @@
 {
   "name": "cssv",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "add css version",
   "bin": {
     "cssv": "bin/start"
@@ -21,5 +21,13 @@
     "version"
   ],
   "author": "wanghx",
-  "license": "ISC"
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/whxaxes/cssv"
+  },
+  "bugs": {
+    "url": "https://github.com/whxaxes/cssv/issues"
+  },
+  "homepage": "https://github.com/whxaxes/cssv"
 }
