@@ -1,0 +1,25 @@
+{
+  "name": "cssv",
+  "version": "1.0.3",
+  "description": "add css version",
+  "bin": {
+    "cssv": "bin/start"
+  },
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "commander": "2.6.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "cssv -a"
+  },
+  "keywords": [
+    "css",
+    "version"
+  ],
+  "author": "wanghx",
+  "license": "ISC"
+}
