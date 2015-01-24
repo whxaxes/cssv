@@ -27,26 +27,24 @@ module.exports = (function () {
     var cssv = function () {};
     var cssvp = cssv.prototype;
 
-    cssvp.run = function () {
-        for (var i = 0; i < folders.length; i++) {
-            var folder = folders[i];
+    var verIsAdd = program.add?true:(program.remove?false:true);
+    var count = 0;
 
-            if (program.add) {
-                if (program.cfname) this.dealFileName(folder, true);
-                else this.dealFile(folder, function (str) {
-                    return str + '?v=' + ~~(Math.random() * 100000);
-                });
-            } else if (program.remove) {
-                if (program.cfname) this.dealFileName(folder, false);
-                else this.dealFile(folder, function (str) {
-                    return str;
-                });
-            }
-        }
+    cssvp.run = function () {
+        var that = this;
+        console.log("\n开始检索...\n")
+
+        folders.forEach(function(f){
+            that.replace(f)
+        });
+
+        console.log("检索完毕\n")
+
+        if(!count)console.log("无需要修改的文件");
+        else console.log("修改文件数："+count);
     };
 
-    //添加版本号方法1，添加后缀v=XXX
-    cssvp.dealFile = function (path, callback) {
+    cssvp.replace = function(path){
         var str, that = this;
 
         try {
@@ -55,40 +53,54 @@ module.exports = (function () {
             return;
         }
 
-        var isMatch = false;
+        var hasMatch = false;
         var logCollector = {};
         str = str.replace(urlReg, function (m) {
             var nstr = m.match(stripReg)[0];
 
-            if (nstr.indexOf(".css") >= 0) {
-                var csslink = url.resolve(path, nstr);
+            var link = url.resolve(path, nstr);
+            var arr = link.split("/");
 
-                if (cache.indexOf(csslink) == -1) {
-                    cache.push(csslink);
-                    that.dealFile(csslink, callback)
-                }
+            var fileName = arr.pop();
+            var prefix = arr.join("/");
 
-                if (!program.all && !program.css && (program.javascript || program.image)) return m;
+            var fileArr = fileName.split(".");
+            var fileType = fileArr[fileArr.length - 1];
 
-            } else if (nstr.indexOf(".js") >= 0) {
-                if (!program.all && !program.javascript) return m;
-            } else if (!program.all && !program.image) {
-                return m;
+            var result;
+            switch (fileType){
+                case "css":
+                    result = that.cssReplace(nstr , link , fileName , fileType , prefix);
+                    break;
+
+                case "js":
+                    if (program.all || program.javascript) result = that.getResult(nstr,m);
+                    break;
+
+                case "png" :
+                case "gif":
+                case "jpg":
+                    if (program.all || program.image)result = that.getResult(nstr,m);
+                    break;
+
+                default : break;
             }
 
-            var result = typeof callback == "function" ? callback.call(this, nstr) : null;
+            if(result){
+                hasMatch = true;
+                logCollector[path] = logCollector[path] || [];
+                logCollector[path].push("更改内容:" + m + " ====> " + result);
 
-            if (!result)return m;
-
-            isMatch = true;
-
-            logCollector[path] = logCollector[path] || [];
-            logCollector[path].push("更改内容:" + m + " ====> " + result)
-
-            return m.charAt(0)+result+m.charAt(m.length-1);
+                if(program.cfname&&fileType=="css"){
+                    return m.replace(stripReg, result);
+                }else {
+                    return m.charAt(0)+result+m.charAt(m.length-1)
+                }
+            }else return m;
         });
 
-        if (isMatch) {
+        if (hasMatch) {
+            count++;
             console.log("\n-----------------------------------------");
             console.log("更改文件:" + path);
             console.log(logCollector[path].join("\n"));
@@ -96,74 +108,51 @@ module.exports = (function () {
 
             fs.writeFileSync(path, str);
         }
-    }
+    };
 
-    //添加版本号方法2，修改文件名
-    cssvp.dealFileName = function (path, isAdd) {
-        var str, that = this;
+    //css替换
+    cssvp.cssReplace = function(nstr , link , fileName , fileType , prefix){
+        var that = this;
+        if(program.cfname){
+            var suffix = getMd5(prefix).substring(0, 5);
+            var fileReg = new RegExp("((_" + suffix + ".*)|)\\." + fileType);
 
-        try {
-            str = fs.readFileSync(path).toString();
-        } catch (e) {
-            return;
-        }
+            var newFileName = fileName.replace(fileReg, "");
+            var fnSuffix;
 
-        var isMatch = false;
-        var logCollector = {};
-        str = str.replace(urlReg, function (m) {
-            var nstr = m.match(stripReg)[0];
+            if (!(link in cache_2)) {
+                //文件版本号_MD5值+随机数+文件类型
+                cache_2[link] = fnSuffix = verIsAdd ? ("_" + suffix + ~~(Math.random() * 10000) + "." + fileType) : ("." + fileType);
+                that.replace(link);
 
-            var link = url.resolve(path, nstr);
-            var arr = link.split("/");
-            var hasDivide = link.indexOf("/") >= 0;
-            var fileName = hasDivide ? arr.pop() : link;
-            var fileType = fileName.split(".")[fileName.split(".").length - 1];
-            var prefix = hasDivide ? arr.join("/") : "";
-            var result = "";
-
-            if (fileType == 'css') {
                 try{
-                    var suffix = getMd5(prefix).substring(0, 5);
-                    var fileReg = new RegExp("((_" + suffix + ".*)|)\\." + fileType);
-                    fileName = fileName.replace(fileReg, "");
-
-                    if (!(link in cache_2)) {
-                        var cssname = isAdd ? ("_" + suffix + ~~(Math.random() * 10000) + "." + fileType) : ("." + fileType);
-
-                        cache_2[link] = cssname;
-
-                        var newlink = prefix + "/" + fileName + cssname;
-                        fs.renameSync(link, newlink);
-
-                        that.dealFileName(newlink, isAdd);
-
-                        result = isAdd ? nstr.replace(fileReg, cssname) : nstr.replace(fileReg, "." + fileType);
-                    } else {
-                        result = isAdd ? nstr.replace(fileReg, cache_2[link]) : nstr.replace(fileReg, "." + fileType);
-                    }
-                    isMatch = true;
+                    fs.renameSync(link, prefix + "/" + newFileName + fnSuffix);
                 }catch(e){
-                    return m;
+                    return null;
                 }
-            }else {
-                return m;
+            } else {
+                fnSuffix = cache_2[link];
             }
 
-            logCollector[path] = logCollector[path] || [];
-            logCollector[path].push("更改内容:" + m + " ====> " + result)
+            if(fileName.indexOf(suffix)==-1 && !verIsAdd) return null;
 
-            return m.replace(stripReg, result);;
-        });
+            return verIsAdd ? nstr.replace(fileReg, fnSuffix) : nstr.replace(fileReg, "." + fileType);
+        }else {
+            if (cache.indexOf(link) == -1) {
+                cache.push(link);
+                that.replace(link);
+            }
 
-        if (isMatch) {
-            console.log("\n-----------------------------------------")
-            console.log("更改文件:" + path);
-            console.log(logCollector[path].join("\n"));
-            console.log("-----------------------------------------")
+            if (!program.all && !program.css && (program.javascript || program.image)) return null;
 
-            fs.writeFileSync(path, str);
+            return that.getResult(nstr,m);
         }
-    }
+    };
+
+    cssvp.getResult = function(str,m){
+        if(m.indexOf("?")==-1 && !verIsAdd)return null;
+        return verIsAdd ? (str + '?v=' + ~~(Math.random() * 100000)) : str;
+    };
 
     //获取MD5加密字符串
     function getMd5(str) {
@@ -206,8 +195,8 @@ module.exports = (function () {
     }
 
     //去头尾空格
-    function trim(msg) {
-        return msg.replace(/(^\s*)|(\s*$)/g, "")
+    function trim(str) {
+        return str.replace(/(^\s*)|(\s*$)/g, "")
     }
 
     return new cssv();
