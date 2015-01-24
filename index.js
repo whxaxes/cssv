@@ -70,7 +70,7 @@ module.exports = (function () {
             var result;
             switch (fileType){
                 case "css":
-                    result = that.cssReplace(nstr , link , fileName , fileType , prefix);
+                    result = that.cssReplace(nstr , link , fileName , fileType , prefix , m);
                     break;
 
                 case "js":
@@ -111,7 +111,7 @@ module.exports = (function () {
     };
 
     //css替换
-    cssvp.cssReplace = function(nstr , link , fileName , fileType , prefix){
+    cssvp.cssReplace = function(nstr , link , fileName , fileType , prefix , m){
         var that = this;
         if(program.cfname){
             var suffix = getMd5(prefix).substring(0, 5);
@@ -126,7 +126,7 @@ module.exports = (function () {
                 that.replace(link);
 
                 try{
-                    fs.renameSync(link, prefix + "/" + newFileName + fnSuffix);
+                    fs.renameSync(link, (prefix||".") + "/" + newFileName + fnSuffix);
                 }catch(e){
                     return null;
                 }

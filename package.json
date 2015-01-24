@@ -1,6 +1,6 @@
 {
   "name": "cssv",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "add css version",
   "bin": {
     "cssv": "bin/start"
