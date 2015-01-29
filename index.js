@@ -80,7 +80,7 @@ module.exports = (function () {
             if(that.isDeep){
                 result = that.deepChange(nstr , link , fileName , fileType , prefix , m);
             }else {
-                var oldVer = m.match(/\?v=\w+/g);
+                var oldVer = m.match(/\?v=\w*/g);
                 oldVer = oldVer && oldVer[0].replace("?v=",'');
                 if(oldVer || that.verIsAdd){
                     result = that.normalChange(nstr , link , oldVer)
@@ -124,7 +124,10 @@ module.exports = (function () {
 
         if (!(link in cache_2)) {
             //文件版本号_路径MD5值+文件内容MD5值+文件类型
-            var addname = "_" + suffix + getMd5(that.replace(link)).substring(0 , 5) + "." + fileType;
+            var newStr = that.replace(link);
+            if(!newStr) return null;
+
+            var addname = "_" + suffix + getMd5(newStr).substring(0 , 5) + "." + fileType;
             if((newFileName + addname)==fileName && this.verIsAdd)return null;
 
             cache_2[link] = fnSuffix = this.verIsAdd ? addname : ("." + fileType);
@@ -146,7 +149,10 @@ module.exports = (function () {
     //浅层次版本号修改，在文件后面添加?v=XXX版本号
     cssvp.normalChange = function(nstr, link , oldVer){
         if (!(link in cache_2)) {
-            var md5samp = getMd5(this.replace(link)).substring(0,5);
+            var str = this.replace(link);
+            if(!str)return null;
+
+            var md5samp = getMd5(str).substring(0,5);
             cache[link] = md5samp;
 
             if(md5samp === oldVer && this.verIsAdd)return null;

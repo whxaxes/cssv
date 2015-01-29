@@ -15,6 +15,6 @@ require("../index").run({
     verIsAdd:program.add?true:(program.remove?false:true),
     changeCss:program.css || program.all || !(program.css&&program.image&&program.javascript),
     changeImg:program.image || program.all,
-    changeJs:program.image || program.all,
+    changeJs:program.javascript || program.all,
     isDeep:program.cfname
 });
