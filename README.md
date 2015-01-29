@@ -12,6 +12,16 @@
 cssv -a  不带其他命令默认只添加css的版本号<br>
 cssv -a -c|-i|-j  添加css或image或js链接的版本号<br>
 cssv -a -A 三个文件都添加版本号<br>
+例
 
-cssv -a -C    由于考虑到chrome的workspace不能识别带后缀名的css链接，所以加了-C命令，这个命令不是添加?v=XX的版本号，而是直接更改css文件名，同时更新html上的链接。这样就可以更改版本号以后继续使用workspace了
--r同上
+        "../../css/ohh.css" ====> ../../css/ohh.css?v=2f701
+        "../../css/abc.css" ====> ../../css/abc.css?v=4ab85
+        "../../css/hahah/abc.css" ====> ../../css/hahah/abc.css?v=cdf83
+
+
+cssv -a -C  深层次更改版本号，前面添加版本号是?v=XXX，添加-C命令后，则直接修改文件名。<br>
+例：
+
+        "../../css/ohh.css" ====> ../../css/ohh_42ce52f701.css
+        "../../css/abc.css" ====> ../../css/abc_42ce54ab85.css
+        "../../css/hahah/abc.css" ====> ../../css/hahah/abc_e132d3d52d.css

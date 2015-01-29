@@ -1,52 +1,54 @@
 var fs = require('fs');
 var url = require('url');
 var crypto = require("crypto");
-var program = require('commander');
 
 var urlReg = /("|'|\()(((\.)|(\.\.)|(http:)|([-_a-zA-Z0-9.]*))\/)*[-_a-zA-Z0-9.]*\.(css|js|png|jpg|gif)[?=0-9a-zA-Z]*("|'|\))/g;  //匹配"**/*.css?v=*"
 var stripReg = /(((\.)|(\.\.)|(http:)|([-_a-zA-Z0-9.]*))\/)*[-_a-zA-Z0-9.]*\.(css|js|png|jpg|gif)/i;   //匹配"**/*.css?v=*"中的**/*.css
 var htmlReg = /.+\.(html|ejs|jade)/g;
 
-var DIRECTORY = "./";
-
-program.version("1.0.4")
-    .option('-a,--add', 'add version')
-    .option('-r,--remove', 'remove version')
-    .option('-c,--css', 'add css version')
-    .option('-i,--image', 'add image version')
-    .option('-j,--javascript', 'add javascript version')
-    .option('-A,--all', 'add css,js,image version')
-    .option('-C,--cfname', "change css file name")
-    .parse(process.argv);
-
 module.exports = (function () {
     'use strict';
-
-    var folders = getAllFolder(DIRECTORY);
-    console.log(folders)
     var cache = [];
     var cache_2 = {};
 
     var cssv = function () {};
     var cssvp = cssv.prototype;
 
-    var verIsAdd = program.add?true:(program.remove?false:true);
     var count = 0;
 
-    cssvp.run = function () {
-        var that = this;
-        console.log("\n开始检索...\n")
+    cssvp.options = {
+        directiory:'./',
+        files:[],
+        verIsAdd:true,
+        changeCss:true,
+        changeImg:false,
+        changeJs:false,
+        isDeep:false
+    };
 
-        folders.forEach(function(f){
+    cssvp.run = function (options) {
+        var that = this;
+
+        this.extend(options);
+
+        console.log("\n开始检索...\n");
+        this.files.forEach(function(f){
             if (f.match(htmlReg)){
                 that.replace(f)
             }
         });
-
         console.log("检索完毕\n");
 
         if(!count)console.log("无需要修改的文件");
         else console.log("修改文件数："+count);
+    };
+
+    cssvp.extend = function(opt){
+        for(var key in this.options){
+            this[key] = (key in opt)?opt[key]:this.options[key]
+        }
+
+        this.files = this.files.length>0?this.files:getAllFolder(this.directiory);
     };
 
     cssvp.replace = function(path){
@@ -68,27 +70,21 @@ module.exports = (function () {
 
             var fileName = arr.pop();
             var prefix = arr.join("/");
-
             var fileArr = fileName.split(".");
             var fileType = fileArr[fileArr.length - 1];
 
             var result;
-            switch (fileType){
-                case "css":
-                    result = that.cssReplace(nstr , link , fileName , fileType , prefix , m);
-                    break;
 
-                case "js":
-                    if (program.all || program.javascript) result = that.getResult(nstr,m);
-                    break;
+            if((fileType=="css" && !that.changeCss) || (fileType=="js" && !that.changeJs) || (fileType.match(/png|gif|jpg/g) && !that.changeImg)) return m;
 
-                case "png" :
-                case "gif":
-                case "jpg":
-                    if (program.all || program.image) result = that.getResult(nstr,m);
-                    break;
-
-                default : break;
+            if(that.isDeep){
+                result = that.deepChange(nstr , link , fileName , fileType , prefix , m);
+            }else {
+                var oldVer = m.match(/\?v=\w+/g);
+                oldVer = oldVer && oldVer[0].replace("?v=",'');
+                if(oldVer || that.verIsAdd){
+                    result = that.normalChange(nstr , link , oldVer)
+                }
             }
 
             if(result){
@@ -96,7 +92,7 @@ module.exports = (function () {
                 logCollector[path] = logCollector[path] || [];
                 logCollector[path].push("更改内容:" + m + " ====> " + result);
 
-                if(program.cfname&&fileType=="css"){
+                if(that.isDeep){
                     return m.replace(stripReg, result);
                 }else {
                     return m.charAt(0)+result+m.charAt(m.length-1)
@@ -113,50 +109,50 @@ module.exports = (function () {
 
             fs.writeFileSync(path, str);
         }
+
+        return str;
     };
 
-    //css替换
-    cssvp.cssReplace = function(nstr , link , fileName , fileType , prefix , m){
+    //深层次版本号修改，直接修改文件名
+    cssvp.deepChange = function(nstr , link , fileName , fileType , prefix){
         var that = this;
-        if(program.cfname){
-            var suffix = getMd5(prefix).substring(0, 5);
-            var fileReg = new RegExp("((_" + suffix + ".*)|)\\." + fileType);
+        var suffix = getMd5(prefix).substring(0, 5);
+        var fileReg = new RegExp("((_" + suffix + ".*)|)\\." + fileType);
 
-            var newFileName = fileName.replace(fileReg, "");
-            var fnSuffix;
+        var newFileName = fileName.replace(fileReg, "");
+        var fnSuffix;
 
-            if (!(link in cache_2)) {
-                //文件版本号_MD5值+随机数+文件类型
-                cache_2[link] = fnSuffix = verIsAdd ? ("_" + suffix + ~~(Math.random() * 10000) + "." + fileType) : ("." + fileType);
-                that.replace(link);
+        if (!(link in cache_2)) {
+            //文件版本号_路径MD5值+文件内容MD5值+文件类型
+            var addname = "_" + suffix + getMd5(that.replace(link)).substring(0 , 5) + "." + fileType;
+            if((newFileName + addname)==fileName && this.verIsAdd)return null;
 
-                try{
-                    fs.renameSync(link, (prefix||".") + "/" + newFileName + fnSuffix);
-                }catch(e){
-                    return null;
-                }
-            } else {
-                fnSuffix = cache_2[link];
+            cache_2[link] = fnSuffix = this.verIsAdd ? addname : ("." + fileType);
+
+            try{
+                fs.renameSync(link, (prefix||".") + "/" + newFileName + fnSuffix);
+            }catch(e){
+                return null;
             }
-
-            if(fileName.indexOf(suffix)==-1 && !verIsAdd) return null;
-
-            return verIsAdd ? nstr.replace(fileReg, fnSuffix) : nstr.replace(fileReg, "." + fileType);
-        }else {
-            if (cache.indexOf(link) == -1) {
-                cache.push(link);
-                that.replace(link);
-            }
-
-            if (!program.all && !program.css && (program.javascript || program.image)) return null;
-
-            return that.getResult(nstr,m);
+        } else {
+            fnSuffix = cache_2[link];
         }
+
+        if(fileName.indexOf(suffix)==-1 && !this.verIsAdd) return null;
+
+        return this.verIsAdd ? nstr.replace(fileReg, fnSuffix) : nstr.replace(fileReg, "." + fileType);
     };
 
-    cssvp.getResult = function(str,m){
-        if(m.indexOf("?")==-1 && !verIsAdd)return null;
-        return verIsAdd ? (str + '?v=' + ~~(Math.random() * 100000)) : str;
+    //浅层次版本号修改，在文件后面添加?v=XXX版本号
+    cssvp.normalChange = function(nstr, link , oldVer){
+        if (!(link in cache_2)) {
+            var md5samp = getMd5(this.replace(link)).substring(0,5);
+            cache[link] = md5samp;
+
+            if(md5samp === oldVer && this.verIsAdd)return null;
+        }
+
+        return this.verIsAdd ? (nstr + '?v=' + cache[link]) : nstr;
     };
 
     //获取MD5加密字符串
