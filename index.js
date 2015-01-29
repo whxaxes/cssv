@@ -20,7 +20,10 @@ program.version("1.0.4")
     .parse(process.argv);
 
 module.exports = (function () {
+    'use strict';
+
     var folders = getAllFolder(DIRECTORY);
+    console.log(folders)
     var cache = [];
     var cache_2 = {};
 
@@ -35,10 +38,12 @@ module.exports = (function () {
         console.log("\n开始检索...\n")
 
         folders.forEach(function(f){
-            that.replace(f)
+            if (f.match(htmlReg)){
+                that.replace(f)
+            }
         });
 
-        console.log("检索完毕\n")
+        console.log("检索完毕\n");
 
         if(!count)console.log("无需要修改的文件");
         else console.log("修改文件数："+count);
@@ -80,7 +85,7 @@ module.exports = (function () {
                 case "png" :
                 case "gif":
                 case "jpg":
-                    if (program.all || program.image)result = that.getResult(nstr,m);
+                    if (program.all || program.image) result = that.getResult(nstr,m);
                     break;
 
                 default : break;
@@ -159,44 +164,37 @@ module.exports = (function () {
         return crypto.createHash("md5").update(str).digest("hex");
     }
 
-    //获取当前目录下的所有文件
-    function getAllFolder(folderPath) {
-        folderPath = trim(folderPath);
-
-        var isDir = fs.lstatSync(folderPath).isDirectory();
-
-        if (!isDir) {
-            return [folderPath]
-        }
-
-        var arr = [];
-        dealPath(folderPath);
-        return arr;
-
-        function dealPath(p) {
-            var files = fs.readdirSync(p);
-
-            for (var i = 0; i < files.length; i++) {
-                p = trim(p);
-                p += p.charAt(p.length - 1) == "/" ? "" : "/";
-
-                var status = fs.lstatSync(p + files[i]);
-
-                if (status.isDirectory()) {
-                    if (files[i].charAt(0) == ".")continue;
-
-                    dealPath(p + files[i] + "/");
-                } else {
-                    if (!files[i].match(htmlReg))continue;
-                    arr.push(p + files[i])
-                }
-            }
-        }
-    }
-
     //去头尾空格
     function trim(str) {
         return str.replace(/(^\s*)|(\s*$)/g, "")
+    }
+
+    //获取当前目录下的所有html文件
+    function getAllFolder(p) {
+        var arr = [];
+
+        try{
+            if (!fs.lstatSync(p = trim(p)).isDirectory()) {
+                return []
+            }
+        }catch(e){
+            return []
+        }
+
+        var files = fs.readdirSync(p);
+        p += p.charAt(p.length - 1) == "/" ? "" : "/";
+
+        for (var i = 0; i < files.length; i++) {
+            try{
+                if (fs.lstatSync(p + files[i]).isDirectory()) {
+                    arr = arr.concat(getAllFolder(p + files[i]));
+                } else {
+                    arr.push(p + files[i])
+                }
+            }catch(e){console.log(e)}
+        }
+
+        return arr;
     }
 
     return new cssv();
