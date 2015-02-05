@@ -146,14 +146,16 @@ module.exports = (function () {
         return this.verIsAdd ? nstr.replace(fileReg, fnSuffix) : nstr.replace(fileReg, "." + fileType);
     };
 
-    //浅层次版本号修改，在文件后面添加?v=XXX版本号
+    //浅层次版本号修改，在文件后面添加?v=XXX版本号(如果是本地文件，添加md5值版本号，如果不是则添加随机数作为版本号)
     cssvp.normalChange = function(nstr, link , oldVer){
         if (!(link in cache_2)) {
             var str = this.replace(link);
-            if(!str)return null;
-
-            var md5samp = getMd5(str).substring(0,5);
-            cache[link] = md5samp;
+            if(!str){
+                cache[link] = ~~(Math.random() * 1000000);
+            }else {
+                var md5samp = getMd5(str).substring(0,5);
+                cache[link] = md5samp;
+            }
 
             if(md5samp === oldVer && this.verIsAdd)return null;
         }
@@ -174,7 +176,6 @@ module.exports = (function () {
     //获取当前目录下的所有html文件
     function getAllFolder(p) {
         var arr = [];
-
         try{
             if (!fs.lstatSync(p = trim(p)).isDirectory()) {
                 return []
@@ -195,7 +196,6 @@ module.exports = (function () {
                 }
             }catch(e){console.log(e)}
         }
-
         return arr;
     }
 
