@@ -8,8 +8,7 @@ var htmlReg = /.+\.(html|ejs|jade)/g;
 
 module.exports = (function () {
     'use strict';
-    var cache = [];
-    var cache_2 = {};
+    var fileCache = {};
 
     var cssv = function () {};
     var cssvp = cssv.prototype;
@@ -74,8 +73,13 @@ module.exports = (function () {
             var fileType = fileArr[fileArr.length - 1];
 
             var result;
-
-            if((fileType=="css" && !that.changeCss) || (fileType=="js" && !that.changeJs) || (fileType.match(/png|gif|jpg/g) && !that.changeImg)) return m;
+            //如果文件为css或js，但又不更改css和js的版本，则仅遍历内容但不更改css和js文件
+            if(((fileType == "css" && !that.changeCss) || (fileType == "js" && !that.changeJs))){
+                if(!(link in fileCache)){
+                    fileCache[link] = that.replace(link);
+                }
+                return m;
+            }else if(fileType.match(/png|gif|jpg/g) && !that.changeImg) return m;
 
             if(that.isDeep){
                 result = that.deepChange(nstr , link , fileName , fileType , prefix , m);
@@ -122,7 +126,7 @@ module.exports = (function () {
         var newFileName = fileName.replace(fileReg, "");
         var fnSuffix;
 
-        if (!(link in cache_2)) {
+        if (!(link in fileCache)) {
             //文件版本号_路径MD5值+文件内容MD5值+文件类型
             var newStr = that.replace(link);
             if(!newStr) return null;
@@ -130,7 +134,7 @@ module.exports = (function () {
             var addname = "_" + suffix + getMd5(newStr).substring(0 , 5) + "." + fileType;
             if((newFileName + addname)==fileName && this.verIsAdd)return null;
 
-            cache_2[link] = fnSuffix = this.verIsAdd ? addname : ("." + fileType);
+            fileCache[link] = fnSuffix = this.verIsAdd ? addname : ("." + fileType);
 
             try{
                 fs.renameSync(link, (prefix||".") + "/" + newFileName + fnSuffix);
@@ -138,7 +142,7 @@ module.exports = (function () {
                 return null;
             }
         } else {
-            fnSuffix = cache_2[link];
+            fnSuffix = fileCache[link];
         }
 
         if(fileName.indexOf(suffix)==-1 && !this.verIsAdd) return null;
@@ -148,19 +152,19 @@ module.exports = (function () {
 
     //浅层次版本号修改，在文件后面添加?v=XXX版本号(如果是本地文件，添加md5值版本号，如果不是则添加随机数作为版本号)
     cssvp.normalChange = function(nstr, link , oldVer){
-        if (!(link in cache_2)) {
+        if (!(link in fileCache)) {
             var str = this.replace(link);
             if(!str){
-                cache[link] = ~~(Math.random() * 1000000);
+                fileCache[link] = ~~(Math.random() * 1000000);
             }else {
                 var md5samp = getMd5(str).substring(0,5);
-                cache[link] = md5samp;
+                fileCache[link] = md5samp;
             }
 
             if(md5samp === oldVer && this.verIsAdd)return null;
         }
 
-        return this.verIsAdd ? (nstr + '?v=' + cache[link]) : nstr;
+        return this.verIsAdd ? (nstr + '?v=' + fileCache[link]) : nstr;
     };
 
     //获取MD5加密字符串
