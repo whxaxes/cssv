@@ -2,8 +2,8 @@ var fs = require('fs');
 var url = require('url');
 var crypto = require("crypto");
 
-var urlReg = /("|'|\()(((\.)|(\.\.)|(http:)|([-_a-zA-Z0-9.]*))\/)*[-_a-zA-Z0-9.]*\.(css|js|png|jpg|gif)[?=0-9a-zA-Z]*("|'|\))/g;  //匹配"**/*.css?v=*"
-var stripReg = /(((\.)|(\.\.)|(http:)|([-_a-zA-Z0-9.]*))\/)*[-_a-zA-Z0-9.]*\.(css|js|png|jpg|gif)/i;   //匹配"**/*.css?v=*"中的**/*.css
+var urlReg = /("|'|\()(((\.)|(\.\.)|(http:)|([-_a-zA-Z0-9.]*))\/)*[-_a-zA-Z0-9.]*\.(css|js|png|jpg|gif)[?=0-9a-zA-Z]*("|'|\))/g;  //匹配"**/*.XX?v=*"
+var stripReg = /(((\.)|(\.\.)|(http:)|([-_a-zA-Z0-9.]*))\/)*[-_a-zA-Z0-9.]*\.(css|js|png|jpg|gif)/i;   //匹配"**/*.XX?v=*"中的**/*.XX
 var htmlReg = /.+\.(html|ejs|jade)/g;
 
 module.exports = (function () {
