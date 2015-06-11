@@ -1,9 +1,9 @@
 #CSSV:给html文件里的链接添加版本号
 
-###使用方法:
+##Install:
 安装:npm install cssv -g
 
-###how to use:
+##Usage:
 1、打开要添加版本号的项目目录<br>
 2、打开当前目录下的控制台，输入cssv -a回车即可给当前目录下的所有html文件里的css链接添加版本号<br>
 3、输入cssv -r则可以移除所有css链接的版本号<br>
